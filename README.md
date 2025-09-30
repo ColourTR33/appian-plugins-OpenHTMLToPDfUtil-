@@ -1,9 +1,5 @@
-# HOW TO USE THIS TEMPLATE
-- To use this template for a new plug-in see the [Creating New Plug-ins](https://docs.google.com/document/d/1cbHt-thJ-6Q1wb1SQZ5sSArfX_9-U9QxDP_SkaO9ulg/edit#heading=h.s1x1fks6kvwq) section of the Customer Success Plug-in Development Guide
-- To use this template with existing plug-ins see the [30 minutes Migration Guide](https://community.appian.com/cs/kb/w/wiki/2135/migrating-plug-ins-to-gradle)
-
 # Open HTML to PDF Utils
-PLUG-IN DESCRIPTION
+This plug-in provides utilities for Appian to convert html to pdf.
 
 ## NAME Smart Service
 SMART SERVICE DESCRIPTION

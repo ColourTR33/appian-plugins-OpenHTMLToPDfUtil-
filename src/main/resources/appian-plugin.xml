@@ -1,7 +1,7 @@
-<appian-plugin name="COMPLETE_ME" key="COMPLETE_ME">
+<appian-plugin name="Open HTML To PDF Utility" key="openhtmltopdfutil">
 
   <plugin-info>
-    <description>COMPLETE_ME</description>
+    <description>Takes an html feed and converts it to pdf</description>
     <vendor name="Appian Corporation" url="https://www.appian.com" />
     <version>1.0.0</version>
     <application-version min="24.2" />
