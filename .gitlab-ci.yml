@@ -1,0 +1,92 @@
+image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/openjdk:17
+
+include:
+  - project: appian/prod/security-services
+    ref: stable
+    file: 
+      - security-templates.gitlab-ci.yml
+      - security-report.gitlab-ci.yml
+  - project: appian/prod/development-insights
+    file: /pipelines/templates/sonarqube-analysis/sonarqube-analysis.yaml
+
+stages:
+  - Build
+  - Test
+  - Check
+  - Security Services Report
+
+variables:
+  GRADLE_USER_HOME: '/root/.gradle'
+  GIT_DEPTH: 0
+  JIRA_PROJECT_KEY: "AN"
+  APPIAN_SQUAD: "Plugin Management"
+
+before_script:
+  - source ./pipeline_functions.sh
+  - add_gradle_credentials
+
+cache:
+  paths:
+    - .gradle/wrapper
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: always
+    - when: never
+
+.dev:
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "appian/dev"'
+
+.prod:
+  rules:
+    - if: '$CI_PROJECT_NAMESPACE == "appian/prod"'
+
+build:
+  stage: Build
+  script:
+    - ./gradlew build
+  artifacts:
+    paths:
+      - build
+
+run_unit_tests:
+  stage: Test
+  script:
+    - ./gradlew :check
+  artifacts:
+    paths:
+      - build
+    reports:
+      junit: build/test-results/test/TEST-*.xml
+
+CVE Scans:
+  stage: Check
+  extends: .dependency-scanning-template
+  before_script:
+    - cd build/libs
+  needs:
+    - job: build
+      artifacts: true
+
+CVE Reporting:
+  stage: Security Services Report
+  extends:
+    - .dependency-check-ticket-generation
+
+
+Coverage:
+  stage: Check
+  script:
+    - ./gradlew jacocoTestCoverageVerification
+
+Checkstyle:
+  stage: Test
+  script:
+    - ./gradlew checkstyleMain checkstyleTest --continue
+  artifacts:
+    when: on_failure
+    paths:
+      - "build/reports/checkstyle/main.html"
+      - "build/reports/checkstyle/test.html"

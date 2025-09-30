@@ -1,0 +1,10 @@
+<appian-plugin name="COMPLETE_ME" key="COMPLETE_ME">
+
+  <plugin-info>
+    <description>COMPLETE_ME</description>
+    <vendor name="Appian Corporation" url="https://www.appian.com" />
+    <version>1.0.0</version>
+    <application-version min="24.2" />
+  </plugin-info>
+
+</appian-plugin>

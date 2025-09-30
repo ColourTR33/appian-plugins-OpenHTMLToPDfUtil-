@@ -1,0 +1,171 @@
+plugins {
+  id 'java'
+  id 'groovy'
+  id 'com.diffplug.spotless' version '6.25.0'
+  id 'com.github.spotbugs' version '6.0.26'
+  id 'org.owasp.dependencycheck' version '8.0.2'
+  id 'pmd'
+  id "checkstyle"
+  id "jacoco"
+}
+
+repositories {
+  mavenCentral()
+
+  flatDir {
+    dirs 'libs'
+  }
+}
+
+dependencies {
+  compileOnly name: 'appian-plug-in-sdk-24.2-stub'
+  compileOnly 'com.appian:connected-systems-core:1.2.0'
+  compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
+  compileOnly 'javax.annotation:javax.annotation-api:1.2'
+  compileOnly 'javax.persistence:javax.persistence-api:2.2'
+  compileOnly 'commons-io:commons-io:2.9.0'
+  compileOnly 'org.apache.commons:commons-lang3:3.8'
+  compileOnly 'org.apache.commons:commons-collections4:4.4'
+  compileOnly 'org.apache.logging.log4j:log4j-1.2-api:2.17.1'
+  compileOnly 'com.google.guava:guava:31.0.1-jre'
+
+  // https://mvnrepository.com/artifact/com.openhtmltopdf/openhtmltopdf-pdfbox
+  implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+  // https://mvnrepository.com/artifact/com.openhtmltopdf/openhtmltopdf-core
+  implementation("com.openhtmltopdf:openhtmltopdf-core:1.0.10")
+  // add your runtime dependencies here
+  // implementation 'groupId:artifactId:version'
+
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+
+  spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.12.0'
+}
+
+checkstyle {
+  configFile = rootProject.file("config/checkstyle.xml")
+  ignoreFailures = false
+  maxWarnings = 0
+  toolVersion '8.25'
+}
+
+spotless {
+  encoding 'UTF-8'
+
+  groovyGradle {
+    target '**/*.gradle'
+    greclipse().configFile('.settings/greclipse.properties')
+  }
+
+  java {
+    eclipse().configFile('.settings/org.eclipse.jdt.core.prefs')
+    importOrder('java', 'org', 'com')
+    removeUnusedImports()
+  }
+
+  format 'xml', {
+    target 'src/**/*.xml'
+    eclipseWtp('xml').configFile('.settings/org.eclipse.wst.xml.core.prefs')
+  }
+
+  format 'misc', {
+    target '*.md'
+    trimTrailingWhitespace()
+    indentWithSpaces(2)
+    endWithNewline()
+  }
+}
+
+spotbugs {
+  ignoreFailures = true
+  showProgress = true
+}
+
+spotbugsMain {
+  reports {
+    html {
+      enabled = true
+      stylesheet = 'fancy-hist.xsl'
+    }
+
+    xml {
+      enabled = false
+    }
+  }
+}
+
+jacocoTestCoverageVerification {
+  violationRules {
+    rule {
+      limit {
+        minimum = 0.25
+      }
+    }
+  }
+}
+
+task jacocoRootReport(type: JacocoReport) {
+  group 'ni'
+  description 'Runs a jacoco coverage report'
+
+  sourceDirectories.from = files(sourceSets.main.allSource.srcDirs)
+  classDirectories.from = files(sourceSets.main.output)
+  executionData.from = files(jacocoTestReport.executionData)
+
+  reports {
+    xml {
+      enabled true
+      destination = project.file("build/jacoco/jacoco.xml")
+    }
+    html.enabled = true
+    csv.enabled = false
+  }
+}
+
+configurations {
+  testImplementation.extendsFrom compileOnly
+  // excludes transitive dependencies
+  implementation.transitive = false
+}
+
+pmd {
+  consoleOutput = true
+  ignoreFailures = true
+  ruleSets = [
+    "category/java/errorprone.xml",
+    "category/java/bestpractices.xml"
+  ]
+}
+
+test {
+  useJUnitPlatform()
+  
+  finalizedBy jacocoRootReport
+}
+
+jar {
+  dependsOn check
+  duplicatesStrategy = DuplicatesStrategy.FAIL
+
+  configurations.implementation.setCanBeResolved(true)
+
+  into('META-INF/lib') {
+    from(configurations.implementation)
+  }
+
+  into('src') {
+    from (sourceSets.main.allJava)
+  }
+
+  manifest {
+    attributes("Spring-Context": "*;publish-context:=false")
+  }
+}
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+
+version = new groovy.xml.XmlSlurper().parse(file('src/main/resources/appian-plugin.xml')).'plugin-info'.version
