@@ -26,6 +26,7 @@ import org.jsoup.select.Elements;
  * Resolves <img> tags containing Appian document IDs into file: URIs. Designed for Java 17 and
  * Appian 24.2 SDK compatibility.
  */
+@SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
 public class HTMLImageResolver {
 
   private static final Logger LOG = LogManager.getLogger(HTMLImageResolver.class);
@@ -52,7 +53,6 @@ public class HTMLImageResolver {
 
   public ResolutionResult resolveImagePaths(String htmlString) {
     List<String> failures = new ArrayList<>();
-
     if (htmlString == null || htmlString.trim().isEmpty()) {
       LOG.warn("Input HTML string is null or empty; returning an empty document.");
       return new ResolutionResult(Jsoup.parse(""), failures);
@@ -67,102 +67,50 @@ public class HTMLImageResolver {
       return new ResolutionResult(htmlDoc, failures);
     }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          "Found {} Appian-linked images to resolve (timeout={} ms).", images.size(), timeoutMs);
-    }
-
-    //    ExecutorService executor = null;
-    //    try {
-    //      executor = Executors.newFixedThreadPool(Math.min(images.size(), maxThreads));
-    //      List<Future<?>> futures = new ArrayList<>();
-    //
-    //      for (String imageUrl : images) {
-    //        futures.add(executor.submit(() -> downloadImage(imageUrl)));
-    //      }
-    //
-    //      for (Future<?> future : futures) {
-    //        try {
-    //          future.get();
-    //        } catch (ExecutionException e) {
-    //          LOG.error("Error downloading image", e.getCause());
-    //        }
-    //      }
-    //
-    //    } catch (InterruptedException e) {
-    //      Thread.currentThread().interrupt();
-    //      if (LOG.isErrorEnabled()) {
-    //        LOG.error("Image processing interrupted", e);
-    //      }
-    //    } finally {
-    //      if (executor != null && !executor.isShutdown()) {
-    //        executor.shutdown();
-    //        try {
-    //          if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-    //            executor.shutdownNow();
-    //          }
-    //        } catch (InterruptedException ie) {
-    //          executor.shutdownNow();
-    //          Thread.currentThread().interrupt();
-    //        }
-    //      }
-    //    }
-    //    try {
-    ExecutorService executor = Executors.newFixedThreadPool(Math.min(images.size(), maxThreads));
+    final int threads = Math.max(1, Math.min(images.size(), maxThreads));
+    final ExecutorService executor = Executors.newFixedThreadPool(threads);
     try {
-      List<Future<Void>> futures = new ArrayList<>();
-
+      final List<Future<Void>> futures = new ArrayList<>();
       for (Element img : images) {
         String docIdStr =
             img.hasAttr(APPIAN_DOC_ID_ATTR)
                 ? img.attr(APPIAN_DOC_ID_ATTR)
                 : img.attr(LEGACY_APPIAN_DOC_ID_ATTR);
+
         if (!docIdStr.matches("\\d+")) {
-          if (LOG.isWarnEnabled()) {
-            LOG.warn("Invalid docId attribute '{}'. Skipping image.", docIdStr);
-          }
+          LOG.warn("Invalid docId attribute '{}'. Skipping image.", docIdStr);
           failures.add(docIdStr);
           applyPlaceholder(img);
           continue;
         }
 
-        long docId = Long.parseLong(docIdStr);
-
-        Callable<Void> task =
-            () -> {
-              try {
-                String filePath = getAppianDocumentFilePath(docId);
-                URI fileUri = new File(filePath).toURI();
-                synchronized (img) {
-                  img.attr("src", fileUri.toString());
-                }
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Resolved docId {} to {}", docId, fileUri);
-                }
-              } catch (AppianException e) {
-                if (LOG.isWarnEnabled()) {
-                  LOG.warn("Failed to resolve docId {}. Applying placeholder.", docId, e);
-                }
-                failures.add(String.valueOf(docId));
-                applyPlaceholder(img);
-              }
-              return null;
-            };
-        futures.add(executor.submit(task));
+        final long docId = Long.parseLong(docIdStr);
+        futures.add(
+            executor.submit(
+                new Callable<Void>() {
+                  @Override
+                  public Void call() {
+                    resolveSingleImage(img, docId, failures);
+                    return null;
+                  }
+                }));
       }
 
-      // Await completion or timeout
       for (Future<Void> f : futures) {
         try {
           f.get(timeoutMs, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-          f.cancel(true);
-          if (LOG.isWarnEnabled()) {
-            LOG.warn("Image resolution task failed or timed out.", e);
-          }
+        } catch (TimeoutException e) {
+          LOG.error("Timed out resolving an image after {} ms", timeoutMs);
+        } catch (ExecutionException e) {
+          LOG.error(
+              "Error resolving image: {}",
+              e.getCause() != null ? e.getCause().getMessage() : e.getMessage(),
+              e);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          LOG.error("Interrupted while resolving images", e);
         }
       }
-
     } finally {
       executor.shutdownNow();
     }
@@ -170,27 +118,33 @@ public class HTMLImageResolver {
     return new ResolutionResult(htmlDoc, failures);
   }
 
-  private String getAppianDocumentFilePath(long docId) throws AppianException {
-    synchronized (contentService) {
+  private void resolveSingleImage(Element img, long docId, List<String> failures) {
+    try {
       Content[] contents = contentService.download(docId, ContentConstants.VERSION_CURRENT, false);
-      if (contents.length == 0 || !(contents[0] instanceof Document)) {
-        throw new AppianException("Invalid content returned for docId " + docId);
+      if (contents == null || contents.length == 0 || !(contents[0] instanceof Document)) {
+        throw new AppianException("Content not found or is not a Document for id=" + docId);
       }
-      Document document = (Document) contents[0];
-      return document.accessAsReadOnlyFile().getAbsolutePath();
+      Document doc = (Document) contents[0];
+      File tmp = doc.accessAsReadOnlyFile();
+      URI fileUri = tmp.toURI();
+
+      img.attr("src", fileUri.toString());
+      img.removeAttr(APPIAN_DOC_ID_ATTR);
+      img.removeAttr(LEGACY_APPIAN_DOC_ID_ATTR);
+    } catch (Exception e) {
+      LOG.warn("Failed to resolve image for docId {}: {}", docId, e.getMessage());
+      failures.add(String.valueOf(docId));
+      applyPlaceholder(img);
     }
   }
 
   private void applyPlaceholder(Element img) {
     if (placeholderImageUri != null && !placeholderImageUri.isBlank()) {
       img.attr("src", placeholderImageUri);
-    } else {
-      img.remove();
     }
   }
 
-  /** Encapsulates the result of image resolution. */
-  public static class ResolutionResult {
+  public static final class ResolutionResult {
     private final org.jsoup.nodes.Document processedDocument;
     private final List<String> failedImageIds;
 
