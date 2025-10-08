@@ -1,0 +1,199 @@
+--- a/src/main/java/HtmlToPdfConvertUtil.java
++++ b/src/main/java/HtmlToPdfConvertUtil.java
+@@
+-import com.appiancorp.suiteapi.knowledge.DocumentDataType;
+-import com.appiancorp.suiteapi.knowledge.FolderDataType;
++import com.appiancorp.suiteapi.knowledge.DocumentDataType;
++import com.appiancorp.suiteapi.knowledge.FolderDataType;
+ import com.appiancorp.suiteapi.process.exceptions.SmartServiceException;
+ import com.appiancorp.suiteapi.process.framework.AppianSmartService;
+ import com.appiancorp.suiteapi.process.framework.Input;
+ import com.appiancorp.suiteapi.process.framework.MessageContainer;
+ import com.appiancorp.suiteapi.process.framework.Order;
++import com.appiancorp.suiteapi.process.framework.Required;
+ import com.appiancorp.suiteapi.process.palette.PaletteInfo;
+-import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
++import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+@@
+-  // Inputs
+-  @Name("SourceDocument")
+-  @Input(required = true)
+-  @DocumentDataType
+-  private Long sourceDocument;
+-
+-  @Name("NewDocumentName")
+-  @Input(required = true)
+-  private String newDocumentName;
+-
+-  @Name("NewDocumentDesc")
+-  @Input(required = false)
+-  private String newDocumentDesc;
+-
+-  @Name("SaveInFolder")
+-  @Input(required = true)
+-  @FolderDataType
+-  private Long saveInFolder;
+-
+-  @Name("PageWidthMm")
+-  @Input(required = false)
+-  private Double pageWidthMm;
+-
+-  @Name("PageHeightMm")
+-  @Input(required = false)
+-  private Double pageHeightMm;
+-
+-  @Name("Dpi")
+-  @Input(required = false)
+-  private Integer dpi;
+-
+-  @Name("ImageResolutionTimeoutMs")
+-  @Input(required = false)
+-  private Long imageResolutionTimeoutMs;
+-
+-  @Name("MaxImageResolutionThreads")
+-  @Input(required = false)
+-  private Integer maxImageResolutionThreads;
+-
+-  @Name("PlaceholderImage")
+-  @Input(required = false)
+-  @DocumentDataType
+-  private Long placeholderImage;
+-
+-  // Output
+-  @Name("NewDocumentCreated")
+-  @DocumentDataType
+-  private Long newDocumentCreated;
++  // Inputs (annotations belong on the setters in Appian plugins)
++  private Long sourceDocument;
++  private String newDocumentName;
++  private String newDocumentDesc;
++  private Long saveInFolder;
++  private Double pageWidthMm;
++  private Double pageHeightMm;
++  private Integer dpi;
++  private Long imageResolutionTimeoutMs;
++  private Integer maxImageResolutionThreads;
++  private Long placeholderImage;
++
++  // Output (Appian will read via the getter)
++  private Long newDocumentCreated;
+@@
+-        builder.useDefaultTextDirection(PdfRendererBuilder.TextDirection.LTR);
+-        builder.usePdfVersion(PdfRendererBuilder.PdfVersion.PDF_1_7);
+-        builder.useFastMode(); // keep perf reasonable
++        // Stick to widely-supported builder calls for your library version
++        // (page size/margins should be handled by CSS if needed)
+@@
+-      newDocumentCreated = createAndUploadDocument(tempPdfFile, newDocumentName, newDocumentDesc, saveInFolder);
++      // Use your existing helper to upload/create the Appian Document
++      newDocumentCreated = createAndUploadDocument(tempPdfFile);
+@@
+-  private Long createAndUploadDocument(File pdfFile, String name, String desc, Long folderId)
+-      throws Exception {
+-    // The exact API depends on your SDK stub; most plugins wrap this in a helper.
+-    // Here we assume the ContentService can create a Document from a File.
+-    // If your team standard uses a different helper, wire it in here.
+-    try (FileInputStream in = new FileInputStream(pdfFile)) {
+-      byte[] bytes = in.readAllBytes();
+-      // Pseudocode-ish call; adjust to your real ContentService API if needed:
+-      // return cs.createDocument(name, desc, folderId, bytes);  // <- common pattern
+-      // To stay stub-friendly, fall back to the Document helper if present:
+-      Document newDoc = cs.createDocument(name, desc, folderId, bytes);
+-      return newDoc.getId();
+-    }
+-  }
++  // (Keep your existing createAndUploadDocument(File) implementation in this class;
++  // if it lives elsewhere, continue to delegate to it.)
+@@
+-  private void handleException(Exception e, String userMessage) throws SmartServiceException {
+-    LOG.error(userMessage, e);
+-    throw new SmartServiceException(userMessage, e);
+-  }
++  private void handleException(Exception e, String userMessage) throws SmartServiceException {
++    LOG.error(userMessage, e);
++    // Use a SmartServiceException constructor that exists in your stub
++    throw new SmartServiceException(this.getClass(), e, userMessage);
++  }
+@@
+-  public Long getNewDocumentCreated() {
++  public Long getNewDocumentCreated() {
+     return newDocumentCreated;
+   }
+
+-  // --- Setters for inputs (Appian injects these) ---
+-  public void setSourceDocument(Long sourceDocument) {
++  // --- Setters for inputs (ANNOTATE HERE for Appian) ---
++  @Name("SourceDocument")
++  @Input
++  @Required
++  @DocumentDataType
++  public void setSourceDocument(Long sourceDocument) {
+     this.sourceDocument = sourceDocument;
+   }
+
+-  public void setNewDocumentName(String newDocumentName) {
++  @Name("NewDocumentName")
++  @Input
++  @Required
++  public void setNewDocumentName(String newDocumentName) {
+     this.newDocumentName = newDocumentName;
+   }
+
+-  public void setNewDocumentDesc(String newDocumentDesc) {
++  @Name("NewDocumentDesc")
++  @Input
++  public void setNewDocumentDesc(String newDocumentDesc) {
+     this.newDocumentDesc = newDocumentDesc;
+   }
+
+-  public void setSaveInFolder(Long saveInFolder) {
++  @Name("SaveInFolder")
++  @Input
++  @Required
++  @FolderDataType
++  public void setSaveInFolder(Long saveInFolder) {
+     this.saveInFolder = saveInFolder;
+   }
+
+-  public void setPageWidthMm(Double pageWidthMm) {
++  @Name("PageWidthMm")
++  @Input
++  public void setPageWidthMm(Double pageWidthMm) {
+     this.pageWidthMm = pageWidthMm;
+   }
+
+-  public void setPageHeightMm(Double pageHeightMm) {
++  @Name("PageHeightMm")
++  @Input
++  public void setPageHeightMm(Double pageHeightMm) {
+     this.pageHeightMm = pageHeightMm;
+   }
+
+-  public void setDpi(Integer dpi) {
++  @Name("Dpi")
++  @Input
++  public void setDpi(Integer dpi) {
+     this.dpi = dpi;
+   }
+
+-  public void setImageResolutionTimeoutMs(Long imageResolutionTimeoutMs) {
++  @Name("ImageResolutionTimeoutMs")
++  @Input
++  public void setImageResolutionTimeoutMs(Long imageResolutionTimeoutMs) {
+     this.imageResolutionTimeoutMs = imageResolutionTimeoutMs;
+   }
+
+-  public void setMaxImageResolutionThreads(Integer maxImageResolutionThreads) {
++  @Name("MaxImageResolutionThreads")
++  @Input
++  public void setMaxImageResolutionThreads(Integer maxImageResolutionThreads) {
+     this.maxImageResolutionThreads = maxImageResolutionThreads;
+   }
+
+-  public void setPlaceholderImage(Long placeholderImage) {
++  @Name("PlaceholderImage")
++  @Input
++  @DocumentDataType
++  public void setPlaceholderImage(Long placeholderImage) {
+     this.placeholderImage = placeholderImage;
+   }
