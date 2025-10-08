@@ -56,8 +56,7 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
   private final transient ContentService cs;
   private static final transient String SOURCE_DOCUMENT = "SourceDocument";
 
-
-    // Inputs (names kept consistent with your original Smart Service)
+  // Inputs (names kept consistent with your original Smart Service)
   private transient Long sourceDocument;
   private transient String newDocumentName;
   private transient String newDocumentDesc;
@@ -99,7 +98,8 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
         } catch (AppianException e) {
           handleException(
               e,
-              "The specified placeholder image could not be accessed. Please check its ID and security.");
+              "The specified placeholder image could not be accessed. Please check its ID and"
+                  + " security.");
           return; // handleException will throw SmartServiceException, but return is defensive
         }
       }
@@ -133,11 +133,11 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
       org.jsoup.nodes.Document resolvedHtmlDoc = result.getProcessedDocument();
 
       if (result.hasFailures()) {
-          if (LOG.isWarnEnabled()) {
-              LOG.warn(
-                      "Some image docIds failed to resolve: {}",
-                      String.join(", ", result.getFailedImageIds()));
-          }
+        if (LOG.isWarnEnabled()) {
+          LOG.warn(
+              "Some image docIds failed to resolve: {}",
+              String.join(", ", result.getFailedImageIds()));
+        }
       }
 
       // Final styling/housekeeping
@@ -145,9 +145,9 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
 
       // --- Render to PDF ---
       tempPdfFile = File.createTempFile("temp_html_to_pdf_", ".pdf");
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Temporary PDF file: {}", tempPdfFile.getAbsolutePath());
-        }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Temporary PDF file: {}", tempPdfFile.getAbsolutePath());
+      }
 
       try (OutputStream os = new FileOutputStream(tempPdfFile)) {
         PdfRendererBuilder builder = new PdfRendererBuilder();
@@ -168,15 +168,15 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
         builder.toStream(os);
         builder.run();
       }
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Rendered PDF to temporary file successfully.");
-        }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Rendered PDF to temporary file successfully.");
+      }
 
       // --- Create an Appian Document and upload the PDF bytes ---
       newDocumentCreated = createAndUploadDocument(tempPdfFile);
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Created new Appian document id={}", newDocumentCreated);
-        }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Created new Appian document id={}", newDocumentCreated);
+      }
 
     } catch (AppianException e) {
       handleException(e, "An Appian API error occurred: " + e.getMessage());
@@ -187,13 +187,13 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
     } finally {
       if (tempPdfFile != null && tempPdfFile.exists()) {
         if (tempPdfFile.delete()) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Deleted temporary file: {}", tempPdfFile.getName());
-            }
+          if (LOG.isInfoEnabled()) {
+            LOG.info("Deleted temporary file: {}", tempPdfFile.getName());
+          }
         } else {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Could not delete temporary file: {}", tempPdfFile.getName());
-            }
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Could not delete temporary file: {}", tempPdfFile.getName());
+          }
         }
       }
     }
@@ -211,9 +211,9 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
     docToCreate.setParent(saveInFolder);
 
     Long docId = cs.create(docToCreate, ContentConstants.UNIQUE_NONE);
-      if (LOG.isDebugEnabled()) {
-          LOG.debug("Created document placeholder with ID: {}", docId);
-      }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created document placeholder with ID: {}", docId);
+    }
 
     Content[] createdContents = cs.download(docId, ContentConstants.VERSION_CURRENT, false);
     if (createdContents == null
@@ -228,9 +228,9 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
       byte[] buffer = new byte[8192];
       int read;
       while (true) {
-          read = fis.read(buffer);
-          if (read == -1) break;
-          os.write(buffer, 0, read);
+        read = fis.read(buffer);
+        if (read == -1) break;
+        os.write(buffer, 0, read);
       }
       os.flush();
     }
@@ -241,9 +241,9 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
 
   private void handleException(Exception e, String userFriendlyMessage)
       throws SmartServiceException {
-      if (LOG.isErrorEnabled()) {
-          LOG.error(userFriendlyMessage, e);
-      }
+    if (LOG.isErrorEnabled()) {
+      LOG.error(userFriendlyMessage, e);
+    }
     this.errorOccurred = true;
     this.errorMessage = userFriendlyMessage;
     throw new SmartServiceException.Builder(getClass(), e).userMessage(userFriendlyMessage).build();
@@ -267,8 +267,7 @@ public class HtmlToPdfConvertUtil extends AppianSmartService {
           }
         }
       } catch (Exception e) {
-        msg.addError(
-                SOURCE_DOCUMENT, "Invalid or inaccessible source document: " + e.getMessage());
+        msg.addError(SOURCE_DOCUMENT, "Invalid or inaccessible source document: " + e.getMessage());
       }
     }
 

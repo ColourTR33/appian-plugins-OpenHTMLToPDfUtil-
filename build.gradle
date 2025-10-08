@@ -6,6 +6,7 @@ plugins {
     id 'org.owasp.dependencycheck' version '9.0.9'
     id 'pmd'
     id "jacoco"
+    id "checkstyle"
 }
 
 group = 'com.appian.cs.plugins'
@@ -20,7 +21,7 @@ repositories {
 
 dependencies {
     // Appian SDK
-    compileOnly name: 'appian-plug-in-sdk-24.2-stub'
+    compileOnly name: "appian-plug-in-sdk-24.2-stub"
     compileOnly 'com.appian:connected-systems-core:1.9.1'
     compileOnly 'javax.servlet:javax.servlet-api:3.1.0'
 
@@ -36,7 +37,7 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.17.2'
     implementation 'com.ibm.icu:icu4j:74.1'
     implementation 'commons-io:commons-io:2.16.1'
-    implementation 'org.apache.commons:commons-lang3:3.14.0'
+    implementation 'org.apache.commons:commons-lang3:3.18.0'
     implementation 'com.google.guava:guava:33.2.0-jre'
 
     // Test dependencies
@@ -70,14 +71,12 @@ java {
 spotless {
     encoding 'UTF-8'
     java {
-        // This will fix import order and formatting automatically
-        importOrder('java', 'javax', 'org', 'com')
+        importOrder 'java', 'javax', 'org', 'com'
         removeUnusedImports()
-        googleJavaFormat()
+        googleJavaFormat('1.17.0').reflowLongStrings()
     }
 }
 
-// ... your other configurations for spotbugs, jacoco, test, and jar can remain ...
 spotbugs {
     ignoreFailures = false
     showProgress = true

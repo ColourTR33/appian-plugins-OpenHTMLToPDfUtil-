@@ -72,57 +72,62 @@ public class HTMLImageResolver {
           "Found {} Appian-linked images to resolve (timeout={} ms).", images.size(), timeoutMs);
     }
 
-      ExecutorService executor = null;
-      try {
-          executor = Executors.newFixedThreadPool(Math.min(images.size(), maxThreads));
-          List<Future<?>> futures = new ArrayList<>();
-
-          for (String imageUrl : images) {
-              futures.add(executor.submit(() -> downloadImage(imageUrl)));
-          }
-
-          for (Future<?> future : futures) {
-              try {
-                  future.get();
-              } catch (ExecutionException e) {
-                  LOG.error("Error downloading image", e.getCause());
-              }
-          }
-
-      } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          if (LOG.isErrorEnabled()) {
-              LOG.error("Image processing interrupted", e);
-          }
-      } finally {
-          if (executor != null && !executor.isShutdown()) {
-              executor.shutdown();
-              try {
-                  if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                      executor.shutdownNow();
-                  }
-              } catch (InterruptedException ie) {
-                  executor.shutdownNow();
-                  Thread.currentThread().interrupt();
-              }
-          }
-      }
-      try {
+    //    ExecutorService executor = null;
+    //    try {
+    //      executor = Executors.newFixedThreadPool(Math.min(images.size(), maxThreads));
+    //      List<Future<?>> futures = new ArrayList<>();
+    //
+    //      for (String imageUrl : images) {
+    //        futures.add(executor.submit(() -> downloadImage(imageUrl)));
+    //      }
+    //
+    //      for (Future<?> future : futures) {
+    //        try {
+    //          future.get();
+    //        } catch (ExecutionException e) {
+    //          LOG.error("Error downloading image", e.getCause());
+    //        }
+    //      }
+    //
+    //    } catch (InterruptedException e) {
+    //      Thread.currentThread().interrupt();
+    //      if (LOG.isErrorEnabled()) {
+    //        LOG.error("Image processing interrupted", e);
+    //      }
+    //    } finally {
+    //      if (executor != null && !executor.isShutdown()) {
+    //        executor.shutdown();
+    //        try {
+    //          if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+    //            executor.shutdownNow();
+    //          }
+    //        } catch (InterruptedException ie) {
+    //          executor.shutdownNow();
+    //          Thread.currentThread().interrupt();
+    //        }
+    //      }
+    //    }
+    //    try {
+    ExecutorService executor = Executors.newFixedThreadPool(Math.min(images.size(), maxThreads));
+    try {
       List<Future<Void>> futures = new ArrayList<>();
+
       for (Element img : images) {
         String docIdStr =
             img.hasAttr(APPIAN_DOC_ID_ATTR)
                 ? img.attr(APPIAN_DOC_ID_ATTR)
                 : img.attr(LEGACY_APPIAN_DOC_ID_ATTR);
         if (!docIdStr.matches("\\d+")) {
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Invalid docId attribute '{}'. Skipping image.", docIdStr);
-            }
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Invalid docId attribute '{}'. Skipping image.", docIdStr);
+          }
           failures.add(docIdStr);
           applyPlaceholder(img);
           continue;
         }
+
         long docId = Long.parseLong(docIdStr);
+
         Callable<Void> task =
             () -> {
               try {
@@ -132,12 +137,12 @@ public class HTMLImageResolver {
                   img.attr("src", fileUri.toString());
                 }
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Resolved docId {} to {}", docId, fileUri);
+                  LOG.debug("Resolved docId {} to {}", docId, fileUri);
                 }
               } catch (AppianException e) {
-                  if (LOG.isWarnEnabled()) {
-                      LOG.warn("Failed to resolve docId {}. Applying placeholder.", docId, e);
-                  }
+                if (LOG.isWarnEnabled()) {
+                  LOG.warn("Failed to resolve docId {}. Applying placeholder.", docId, e);
+                }
                 failures.add(String.valueOf(docId));
                 applyPlaceholder(img);
               }
@@ -145,20 +150,23 @@ public class HTMLImageResolver {
             };
         futures.add(executor.submit(task));
       }
+
       // Await completion or timeout
       for (Future<Void> f : futures) {
         try {
           f.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
           f.cancel(true);
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Image resolution task failed or timed out.", e);
-            }
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Image resolution task failed or timed out.", e);
+          }
         }
       }
+
     } finally {
       executor.shutdownNow();
     }
+
     return new ResolutionResult(htmlDoc, failures);
   }
 

@@ -29,7 +29,8 @@ public final class PageNumberingOptions {
   @SuppressFBWarnings(
       value = "EI_EXPOSE_REP",
       justification =
-          "Returning a direct reference is intentional for interoperability with other PDFBox APIs. The risk is documented.")
+          "Returning a direct reference is intentional for interoperability with other PDFBox APIs."
+              + " The risk is documented.")
   public PDFont getFont() {
     return this.font;
   }
