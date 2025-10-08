@@ -1,11 +1,10 @@
-
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts.FontName;
 
 /**
- * A configuration object that holds styling and formatting options for page numbering.
- * Use the nested Builder class to construct an instance.
+ * A configuration object that holds styling and formatting options for page numbering. Use the
+ * nested Builder class to construct an instance.
  */
 public final class PageNumberingOptions {
 
@@ -20,9 +19,19 @@ public final class PageNumberingOptions {
     this.pageFormat = builder.pageFormat;
   }
 
-  // Public getters for the options
+  /**
+   * @return A new instance of the Builder.
+   */
+  public static Builder builder() {
+    return new Builder();
+  }
+
+  @SuppressFBWarnings(
+      value = "EI_EXPOSE_REP",
+      justification =
+          "Returning a direct reference is intentional for interoperability with other PDFBox APIs. The risk is documented.")
   public PDFont getFont() {
-    return font;
+    return this.font;
   }
 
   public float getFontSize() {
@@ -33,23 +42,17 @@ public final class PageNumberingOptions {
     return pageFormat;
   }
 
-  /**
-   * @return A new instance of the Builder.
-   */
-  public static Builder builder() {
-    return new Builder();
-  }
-
-  /**
-   * The Builder class for creating PageNumberingOptions instances.
-   * This is where the default values now live.
-   */
+  /** The Builder class for creating PageNumberingOptions instances. */
   public static class Builder {
-    private PDFont font = new PDType1Font(FontName.HELVETICA);// ** FIX APPLIED HERE: Updated the font initialization to use the modern
-                                                              // PDFBox 3.x API **
-    private float fontSize = 10.0f;
-    private String pageFormat = "Page {0} of {1}";
 
+    private transient PDFont font = PDType1Font.HELVETICA; // NOPMD
+    private transient float fontSize = 10.0f; // NOPMD
+    private transient String pageFormat = "Page {0} of {1}"; // NOPMD
+
+    @SuppressFBWarnings(
+        value = "EI_EXPOSE_REP2",
+        justification =
+            "Storing a direct reference is intentional. PDFont objects are not easily cloneable.")
     public Builder font(PDFont font) {
       this.font = font;
       return this;
